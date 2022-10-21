@@ -1,0 +1,79 @@
+tail -n +7 ptg000002l.fasta.mod.EDTA.TEanno.gff3 |   awk '
+    BEGIN {
+        FS="\t"
+        print "["
+    }
+    {
+        print "  { \"seqid\": \"" $1 "\", \"source\": \"" $2 "\", \"sequence_ontology\": \"" $3 "\", \"start\": \"" $4 "\", \"end\": \"" $5 "\", \"score\": \"" $6 "\", \"strand\": \"" $7 "\", \"phase\": \"" $8 "\", \"attributes\": \"" $9 "\" },"
+    }
+    END {
+        print "]"
+    }
+    ' > ptg000002l.fasta.mod.EDTA.TEanno.gff3.json
+
+
+Eliminar Saltos de linea
+awk '/^>/{if (l!="") print l; print; l=""; next}{l=l "" $0}END{print l}' ptg000002l.fasta > ptg000002l.fasta.prejson.fasta 
+Procesar y Crear JSON
+awk 'BEGIN {print "["} /^>/ {if (l!="") print l; print "{\"SeqId\": \"" $0 "\","; next}{print "\"Sequence\":\"" $0 "\"},"} END{print "]"}' ptg000002l.fasta.prejson.fasta > ptg000002l.fasta.dirty.json
+remover > 
+sed 's/>//g' ptg000002l.fasta.dirty.json > ptg000002l.fasta.json
+
+# qseqid means Query Seq-id
+# sseqid means Subject Seq-id 
+# pident means Percentage of identical matches
+# length means Alignment length
+# mismatch means Number of mismatches
+# gapopen means Number of gap openings
+# qstart means Start of alignment in query
+# qend means End of alignment in query
+# sstart means Start of alignment in subject
+# send means End of alignment in subject
+# evalue means Expect value
+# bitscore means Bit score
+
+awk '
+    BEGIN {
+        FS="\t"
+        print "["
+    }
+    {
+        print "  { \"qseqid\": \"" $1 "\", \"sseqid\": \"" $2 "\", \"pident\": \"" $3 "\", \"length\": \"" $4 "\", \"mismatch\": \"" $5 "\", \"gapopen\": \"" $6 "\", \"qstart\": \"" $7 "\", \"qend\": \"" $8 "\", \"sstart\": \"" $9 "\", \"send\": \"" $10 "\", \"evalue\": \"" $11 "\", \"bitscore\": \"" $12 "\" },"
+    }
+    END {
+        print "]"
+    }
+    ' Blast_NR.abinitio_prot_Dm.tab > Blast_NR.abinitio_prot_Dm.tab.json
+
+
+<seq id> <alignment start> <alignment end> <envelope start> <envelope end> <hmm acc> <hmm name> <type> <hmm start> <hmm end> <hmm length> <bit score> <E-value> <significance> <clan>
+tail -n +29 augustus.abinitio.pfam_results.txt | awk '
+    BEGIN {
+        FS="   *"
+        print "["
+    }
+    {
+        print "  { \"seq_id\": \"" $1 "\", \"alignment_start\": \"" $2 "\", \"alignment_end\": \"" $3 "\", \"envelope_start\": \"" $4 "\", \"envelope_end\": \"" $5 "\", \"hmm_acc\": \"" $6 "\", \"hmm_name\": \"" $7 "\", \"type\": \"" $8 "\", \"hmm_start\": \"" $9 "\", \"hmm_end\": \"" $10 "\", \"hmm_length\": \"" $11 "\", \"bit_score\": \"" $12 "\", \"e_value\": \"" $13 "\", \"significance\": \"" $14 "\", \"clan\": \"" $15 "\" },"
+    }
+    END {
+        print "]"
+    }
+    ' > augustus.abinitio.pfam_results.txt.json
+
+
+Eliminar Saltos de linea
+awk '/^>/{if (l!="") print l; print; l=""; next}{l=l "" $0}END{print l}' augustus.abinitio.aa > augustus.abinitio.prejson.aa 
+Procesar y Crear JSON
+awk 'BEGIN {print "["} /^>/ {if (l!="") print l; print "{\"SeqId\": \"" $0 "\","; next}{print "\"Sequence\":\"" $0 "\"},"} END{print "]"}' augustus.abinitio.prejson.aa > augustus.abinitio.dirty.json
+remover > 
+sed 's/>//g' augustus.abinitio.dirty.json > augustus.abinitio.aa.json
+
+MONGO
+mongoimport --db FinalGroupA_DB --collection anotation --file ptg000002l.fasta.mod.EDTA.TEanno.gff3.json --jsonArray
+mongoimport --db FinalGroupA_DB --collection protein --file augustus.abinitio.aa.json --jsonArray
+mongoimport --db FinalGroupA_DB --collection proteinDomain --file augustus.abinitio.pfam_results.txt.json --jsonArray
+mongoimport --db FinalGroupA_DB --collection proteinPrediction --file Blast_NR.abinitio_prot_Dm.tab.json --jsonArray
+mongoimport --db FinalGroupA_DB --collection sequence --file ptg000002l.fasta.json --jsonArray
+mongoimport --db FinalGroupA_DB --collection sequence --file ptg000002l.fasta.json --jsonArray
+
+
